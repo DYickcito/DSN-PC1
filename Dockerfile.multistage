@@ -1,46 +1,49 @@
 # --- ETAPA 1: BUILDER (Construcción) ---
-# Usamos Alpine para que sea ligero
+# Usamos una imagen de Python basada en Alpine para que el proceso sea ligero
 FROM python:3.11-alpine AS builder
 
-# Instalamos dependencias necesarias para compilar librerías de Python
+# Instalamos dependencias del sistema necesarias para compilar algunas librerías de Python
 RUN apk add --no-cache gcc musl-dev linux-headers
 
 WORKDIR /build
 
-# Copiamos solo el archivo de requerimientos para aprovechar el caché
+# Copiamos el archivo de requerimientos
 COPY requirements.txt .
 
-# Instalamos las librerías en una carpeta temporal (/install)
+# Instalamos las librerías en una carpeta específica (/install)
+# El flag --prefix permite separar las librerías instaladas del sistema base
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 
-# --- ETAPA 2: RUNTIME (Imagen Final) ---
+# --- ETAPA 2: RUNTIME (Imagen Final para AWS) ---
 FROM python:3.11-alpine
 
-# Instalamos ffmpeg (necesario para procesar videos en la nube)
+# Instalamos ffmpeg, que es fundamental para que yt-dlp pueda unir video y audio
 RUN apk add --no-cache ffmpeg
 
 WORKDIR /app
 
-# Copiamos solo las librerías ya instaladas desde la etapa de construcción
-# Esto evita que herramientas de compilación pesadas queden en la imagen final
+# Copiamos solo las librerías instaladas en la etapa anterior
+# Esto elimina todas las herramientas de compilación pesadas (gcc, headers)
 COPY --from=builder /install /usr/local
 
-# Copiamos el código de la aplicación
+# Copiamos el código fuente de nuestra aplicación
 COPY app.py .
 
-# Creamos la carpeta de descargas con permisos de escritura (clave para AWS)
+# PASO CRÍTICO: Crear carpeta de descargas y dar permisos totales (777)
+# Esto evita errores de "Permission Denied" cuando el contenedor intenta guardar videos
 RUN mkdir -p downloads && chmod 777 downloads
 
-# Metadata y seguridad
-LABEL description="Práctica Calificada Lab 04 - Multi-stage Build"
+# Metadata para el laboratorio
+LABEL maintainer="Estudiante DSN"
+LABEL description="Práctica Calificada - Multi-stage Build optimizado"
 
-# Exponemos el puerto de la aplicación Flask
+# Exponemos el puerto de Flask
 EXPOSE 5000
 
-# Healthcheck para verificar que el servidor responde
+# Verificación de salud para asegurar que el contenedor responde en el puerto 5000
 HEALTHCHECK --interval=30s --timeout=3s \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000')" || exit 1
 
-# Comando para ejecutar la aplicación
+# Comando para arrancar la aplicación
 CMD ["python", "app.py"]
