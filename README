@@ -1,0 +1,76 @@
+GUÍA DE EJECUCIÓN LOCAL
+
+Este documento detalla los pasos para construir, optimizar y ejecutar la aplicación de descarga de videos utilizando Docker en tu propia computadora.
+
+1. REQUISITOS PREVIOS
+
+Tener instalado Docker Desktop
+
+Tener los archivos del proyecto en una carpeta local:
+
+app.py
+
+requirements.txt
+
+Dockerfile (Estándar)
+
+Dockerfile.optimizado (Alpine)
+
+Dockerfile.multistage (Optimizado final)
+
+2. PROCESO DE CONSTRUCCIÓN (BUILD)
+
+Abre una terminal (PowerShell, CMD o Terminal de Linux/Mac) dentro de la carpeta del proyecto:
+
+A. Versión Estándar (Debian Slim)
+
+docker build -t insta-app:v1-estandar -f Dockerfile .
+
+B. Versión Optimizada (Alpine)
+
+docker build -t insta-app:v2-alpine -f Dockerfile.optimizado .
+
+C. Versión Profesional (Multi-stage)
+
+docker build -t insta-app:v3-multi -f Dockerfile.multistage .
+
+3. COMPARACIÓN DE TAMAÑOS
+
+Una vez construidas, verifica cuánto espacio ahorraste con las optimizaciones:
+
+docker images | findstr "insta-app"  (En Windows)
+docker images | grep "insta-app"     (En Linux/Mac)
+
+4. EJECUCIÓN DEL CONTENEDOR (RUN)
+
+Para poner en marcha la aplicación optimizada en tu PC, usa el siguiente comando:
+
+docker run -d -p 5000:5000 --name mi-practica-local insta-app:v3-multi
+
+5. ACCESO A LA APLICACIÓN
+
+Abre tu navegador e ingresa a la siguiente dirección:
+
+http://localhost:5000
+
+Desde aquí podrás pegar links de Instagram/YouTube, presionar "Descargar" y ver la lista de "Videos Destacados".
+
+6. GESTIÓN Y LIMPIEZA
+
+Si necesitas detener o borrar el contenedor para realizar cambios:
+
+Ver si el contenedor está corriendo
+
+docker ps
+
+Detener el contenedor
+
+docker stop mi-practica-local
+
+Eliminar el contenedor
+
+docker rm mi-practica-local
+
+Ver logs (si algo falla)
+
+docker logs mi-practica-local
