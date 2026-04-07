@@ -1,20 +1,46 @@
-# ETAPA 1: Construcción
+# --- ETAPA 1: BUILDER (Construcción) ---
+# Usamos Alpine para que sea ligero
 FROM python:3.11-alpine AS builder
+
+# Instalamos dependencias necesarias para compilar librerías de Python
 RUN apk add --no-cache gcc musl-dev linux-headers
+
 WORKDIR /build
+
+# Copiamos solo el archivo de requerimientos para aprovechar el caché
 COPY requirements.txt .
+
+# Instalamos las librerías en una carpeta temporal (/install)
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# ETAPA 2: Ejecución
+
+# --- ETAPA 2: RUNTIME (Imagen Final) ---
 FROM python:3.11-alpine
-# Instalamos ffmpeg porque Instagram/Youtube a veces lo requieren para unir video y audio
+
+# Instalamos ffmpeg (necesario para procesar videos en la nube)
 RUN apk add --no-cache ffmpeg
+
 WORKDIR /app
+
+# Copiamos solo las librerías ya instaladas desde la etapa de construcción
+# Esto evita que herramientas de compilación pesadas queden en la imagen final
 COPY --from=builder /install /usr/local
+
+# Copiamos el código de la aplicación
 COPY app.py .
 
-# Crear carpeta de descargas y dar permisos
-RUN mkdir downloads && chmod 777 downloads
+# Creamos la carpeta de descargas con permisos de escritura (clave para AWS)
+RUN mkdir -p downloads && chmod 777 downloads
 
+# Metadata y seguridad
+LABEL description="Práctica Calificada Lab 04 - Multi-stage Build"
+
+# Exponemos el puerto de la aplicación Flask
 EXPOSE 5000
+
+# Healthcheck para verificar que el servidor responde
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000')" || exit 1
+
+# Comando para ejecutar la aplicación
 CMD ["python", "app.py"]
